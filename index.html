@@ -898,30 +898,22 @@ async function parseAddress() {
       return;
     }
 
-    // For short links, use a CORS proxy to resolve the redirect server-side
-    // (avoids the mobile issue where window.open launches the native Maps app)
+    // For short links, use mapu.retiolus.net — a purpose-built Google Maps unshortener
+    // Works on mobile where window.open() would launch the native Maps app instead
     st.textContent = 'Resolving short link\u2026';
-    const resolved = await resolveViaProxy(raw);
-    if (resolved) {
-      const coords = extractCoordsFromGmapsUrl(resolved);
-      if (coords) {
-        userLat = coords[0];
-        userLng = coords[1];
-        st.className = 'geo-status ok';
-        st.textContent = '\u2713 Got location from Maps link (' + userLat.toFixed(4) + ', ' + userLng.toFixed(4) + ')';
-        render();
-        return;
-      }
+    const result = await resolveShortMapsUrl(raw);
+    if (result) {
+      userLat = result.lat;
+      userLng = result.lng;
+      st.className = 'geo-status ok';
+      st.textContent = '\u2713 Got location from Maps link (' + userLat.toFixed(4) + ', ' + userLng.toFixed(4) + ')';
+      render();
+      return;
     }
 
-    // Proxy failed — show a mobile-friendly fallback
+    // API failed — show a mobile-friendly fallback
     st.className = 'geo-status err';
-    st.innerHTML = `
-      <div style="line-height:1.5">
-        Couldn't resolve this link automatically.<br>
-        <b>On your phone:</b> Open Google Maps, find your spot, tap <b>Share</b> → <b>Copy link</b> to get a fresh short link and try again, 
-        or tap the location pin and copy the GPS coordinates (e.g. <b>37.9755, 23.7348</b>) and paste those instead.
-      </div>`;
+    st.innerHTML = '<div style="line-height:1.5">Couldn't resolve this link automatically. Try opening Google Maps, finding your spot, and copying the GPS coordinates from the place info panel (e.g. <b>37.9755, 23.7348</b>) and pasting those instead.</div>';
     return;
   }
 
@@ -1016,45 +1008,27 @@ function extractCoordsFromGmapsUrl(url) {
   return null;
 }
 
-// Resolve a short Google Maps URL using a CORS proxy to follow the redirect chain.
-// This works on mobile where window.open() launches the native Maps app instead of a browser tab.
-async function resolveViaProxy(shortUrl) {
-  function extractMapsUrlFromHtml(text) {
-    const m1 = text.match(/(?:canonical|og:url)[^>]*(?:href|content)="([^"]*google\.com\/maps[^"]*)"/i);
-    if (m1) return m1[1];
-    const m2 = text.match(/https?:\/\/(?:www\.)?google\.com\/maps\/[^\s"'<>]+@-?\d+\.\d+,-?\d+\.\d+[^\s"'<>]*/);
-    if (m2) return m2[0];
-    const m3 = text.match(/https?:\/\/(?:www\.)?google\.com\/maps\/[^\s"'<>]+!3d-?\d+\.\d+!4d-?\d+\.\d+[^\s"'<>]*/);
-    if (m3) return m3[0];
-    return null;
-  }
-
+// Resolve a short Google Maps URL using mapu.retiolus.net —
+// a purpose-built Google Maps unshortener that returns lat/lng directly.
+// Works on mobile where window.open() would launch the native Maps app.
+async function resolveShortMapsUrl(shortUrl) {
   try {
-    const resp = await fetch('https://corsproxy.io/?url=' + encodeURIComponent(shortUrl), { signal: AbortSignal.timeout(10000) });
-    if (resp.ok) {
-      const text = await resp.text();
-      const finalHeader = resp.headers.get('x-final-url') || resp.headers.get('x-redirected-url') || '';
-      if (/google\.com\/maps/i.test(finalHeader)) return finalHeader;
-      const fromBody = extractMapsUrlFromHtml(text);
-      if (fromBody) return fromBody;
-      const metaRefresh = text.match(/content="\d+;\s*url=([^"]*google\.com[^"]*)"/i);
-      if (metaRefresh) return metaRefresh[1];
-      const jsRedirect = text.match(/(?:window\.location|location\.href)\s*=\s*["']([^"']*google\.com\/maps[^"']*)["']/i);
-      if (jsRedirect) return jsRedirect[1];
+    const resp = await fetch(
+      'https://mapu.retiolus.net/unshortener?link=' + encodeURIComponent(shortUrl),
+      { signal: AbortSignal.timeout(10000) }
+    );
+    if (!resp.ok) return null;
+    const data = await resp.json();
+    // Response includes lat/long directly — no URL parsing needed
+    if (data && typeof data.lat === 'number' && typeof data.long === 'number') {
+      return { lat: data.lat, lng: data.long };
+    }
+    // Fallback: try to extract from full_link if lat/long missing
+    if (data && data.full_link) {
+      const coords = extractCoordsFromGmapsUrl(data.full_link);
+      if (coords) return { lat: coords[0], lng: coords[1] };
     }
   } catch (e) {}
-
-  try {
-    const resp = await fetch('https://api.allorigins.win/get?url=' + encodeURIComponent(shortUrl), { signal: AbortSignal.timeout(10000) });
-    if (resp.ok) {
-      const json = await resp.json();
-      const finalUrl = json && json.status && json.status.url ? json.status.url : '';
-      if (/google\.com\/maps/i.test(finalUrl)) return finalUrl;
-      const fromBody = extractMapsUrlFromHtml(json && json.contents ? json.contents : '');
-      if (fromBody) return fromBody;
-    }
-  } catch (e) {}
-
   return null;
 }
 
