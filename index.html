@@ -955,32 +955,57 @@ async function parseAddress() {
   }
 
   const normalized = normalizeAddr(raw);
-  const alreadyLocated = /athens|greece/i.test(normalized);
-  const queries = alreadyLocated
-    ? [normalized]
-    : [normalized + ', Athens, Greece', normalized + ', Greece'];
+  // Always try with explicit Athens/Greece context first — "Athens" in a place name
+  // (e.g. "Play Theatrou Athens Hotel") doesn't mean it's already geo-qualified.
+  // Also try the bare name in case it already has a full address.
+  const queries = [
+    normalized + ', Athens, Greece',
+    normalized + ', Greece',
+    normalized,
+  ];
 
   try {
     let data = [];
     for (const q of queries) {
-      const resp = await fetch('https://nominatim.openstreetmap.org/search?q=' + encodeURIComponent(q) + '&format=json&limit=1&addressdetails=0');
+      const resp = await fetch('https://nominatim.openstreetmap.org/search?q=' + encodeURIComponent(q) + '&format=json&limit=1&addressdetails=0&countrycode=gr');
       data = await resp.json();
       if (data.length > 0) break;
     }
-    if (data.length === 0) {
-      st.className = 'geo-status err';
-      st.textContent = 'Not found. Try a landmark (Syntagma, Monastiraki) or GPS coords (37.975, 23.735).';
+    if (data.length > 0) {
+      userLat = parseFloat(data[0].lat);
+      userLng = parseFloat(data[0].lon);
+      st.className = 'geo-status ok';
+      st.textContent = '\u2713 Found: ' + data[0].display_name.substring(0, 60) + '\u2026';
+      render();
       return;
     }
-    userLat = parseFloat(data[0].lat);
-    userLng = parseFloat(data[0].lon);
-    st.className = 'geo-status ok';
-    st.textContent = '\u2713 Found: ' + data[0].display_name.substring(0, 60) + '\u2026';
-    render();
-  } catch (e) {
-    st.className = 'geo-status err';
-    st.textContent = 'Network error. Try a landmark name or paste GPS coordinates.';
-  }
+  } catch (e) {}
+
+  // Nominatim missed it — try Photon (better POI/hotel coverage)
+  try {
+    const photonResp = await fetch(
+      'https://photon.komoot.io/api/?q=' + encodeURIComponent(normalized) +
+      '&limit=1&lat=37.975&lon=23.735&lang=en',
+      { signal: AbortSignal.timeout(8000) }
+    );
+    if (photonResp.ok) {
+      const photonData = await photonResp.json();
+      if (photonData.features && photonData.features.length > 0) {
+        const [lng, lat] = photonData.features[0].geometry.coordinates;
+        userLat = lat;
+        userLng = lng;
+        const props = photonData.features[0].properties;
+        const label = props.name || props.street || normalized;
+        st.className = 'geo-status ok';
+        st.textContent = '\u2713 Found: ' + label.substring(0, 60);
+        render();
+        return;
+      }
+    }
+  } catch (e) {}
+
+  st.className = 'geo-status err';
+  st.textContent = 'Not found. Try a landmark (Syntagma, Monastiraki) or GPS coords (37.975, 23.735).';
 }
 
 // Extract lat/lng from various Google Maps URL formats
@@ -1008,27 +1033,50 @@ function extractCoordsFromGmapsUrl(url) {
   return null;
 }
 
-// Resolve a short Google Maps URL using mapu.retiolus.net —
-// a purpose-built Google Maps unshortener that returns lat/lng directly.
-// Works on mobile where window.open() would launch the native Maps app.
+// Resolve a short Google Maps URL. Tries two services in sequence:
+// 1. mapu.retiolus.net — purpose-built, returns lat/lng directly
+// 2. allorigins.win   — generic CORS proxy, follows redirects and exposes final URL
 async function resolveShortMapsUrl(shortUrl) {
+  // Method 1: mapu.retiolus.net
   try {
     const resp = await fetch(
       'https://mapu.retiolus.net/unshortener?link=' + encodeURIComponent(shortUrl),
-      { signal: AbortSignal.timeout(10000) }
+      { signal: AbortSignal.timeout(8000) }
     );
-    if (!resp.ok) return null;
-    const data = await resp.json();
-    // Response includes lat/long directly — no URL parsing needed
-    if (data && typeof data.lat === 'number' && typeof data.long === 'number') {
-      return { lat: data.lat, lng: data.long };
-    }
-    // Fallback: try to extract from full_link if lat/long missing
-    if (data && data.full_link) {
-      const coords = extractCoordsFromGmapsUrl(data.full_link);
-      if (coords) return { lat: coords[0], lng: coords[1] };
+    if (resp.ok) {
+      const data = await resp.json();
+      if (data && typeof data.lat === 'number' && typeof data.long === 'number') {
+        return { lat: data.lat, lng: data.long };
+      }
+      if (data && data.full_link) {
+        const coords = extractCoordsFromGmapsUrl(data.full_link);
+        if (coords) return { lat: coords[0], lng: coords[1] };
+      }
     }
   } catch (e) {}
+
+  // Method 2: allorigins.win — follows the redirect chain and returns final URL
+  try {
+    const resp = await fetch(
+      'https://api.allorigins.win/get?url=' + encodeURIComponent(shortUrl),
+      { signal: AbortSignal.timeout(10000) }
+    );
+    if (resp.ok) {
+      const data = await resp.json();
+      // status.url is the final URL after all redirects
+      const finalUrl = (data.status && data.status.url) || '';
+      if (finalUrl) {
+        const coords = extractCoordsFromGmapsUrl(finalUrl);
+        if (coords) return { lat: coords[0], lng: coords[1] };
+      }
+      // Also scan page body — Google Maps embeds coords in the HTML
+      if (data.contents) {
+        const coords = extractCoordsFromGmapsUrl(data.contents);
+        if (coords) return { lat: coords[0], lng: coords[1] };
+      }
+    }
+  } catch (e) {}
+
   return null;
 }
 
