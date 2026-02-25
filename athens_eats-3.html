@@ -1,0 +1,1242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0f2a44">
+<title>Athens Eats</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,600;0,9..40,700;1,9..40,400&family=Fraunces:ital,opsz,wght@0,9..144,700;1,9..144,400&display=swap" rel="stylesheet">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='80'>🇬🇷</text></svg>">
+<style>
+:root {
+  --bg: #f0ebe3;
+  --card: #ffffff;
+  --navy: #0f2a44;
+  --blue: #1d6fa5;
+  --accent: #d4740e;
+  --accent-light: #fff3e6;
+  --green: #2d7a3a;
+  --green-light: #e8f5ea;
+  --red: #c0392b;
+  --red-light: #fdeaea;
+  --gray: #6b7280;
+  --gray-light: #e5e1da;
+  --radius: 12px;
+  --shadow: 0 2px 16px rgba(15,42,68,.08);
+  --shadow-lg: 0 8px 32px rgba(15,42,68,.12);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--bg);
+  color: #1a1a1a;
+  min-height: 100dvh;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* === HEADER === */
+header {
+  background: var(--navy);
+  color: #fff;
+  padding: 20px 16px 16px;
+  position: sticky; top: 0; z-index: 100;
+  box-shadow: 0 4px 20px rgba(0,0,0,.2);
+}
+header h1 {
+  font-family: 'Fraunces', serif;
+  font-size: 1.55rem;
+  letter-spacing: -.02em;
+  text-align: center;
+}
+header .sub { text-align: center; font-size: .78rem; opacity: .65; margin-top: 2px; }
+
+/* === LOCATION PANEL === */
+.loc-panel {
+  background: var(--card);
+  margin: 12px;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+.loc-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--gray-light);
+}
+.loc-tab {
+  flex: 1;
+  padding: 10px 8px;
+  text-align: center;
+  font-size: .82rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  background: none;
+  color: var(--gray);
+  transition: all .2s;
+  position: relative;
+}
+.loc-tab.active {
+  color: var(--blue);
+}
+.loc-tab.active::after {
+  content: '';
+  position: absolute;
+  bottom: -1px; left: 16%; right: 16%;
+  height: 3px;
+  background: var(--blue);
+  border-radius: 3px 3px 0 0;
+}
+.loc-content { padding: 14px 14px 16px; }
+.loc-content[hidden] { display: none; }
+
+.geo-btn {
+  width: 100%;
+  padding: 13px;
+  border: none;
+  border-radius: 8px;
+  background: var(--blue);
+  color: #fff;
+  font-family: inherit;
+  font-size: .92rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: background .2s, transform .1s;
+}
+.geo-btn:active { transform: scale(.97); }
+.geo-btn:hover { background: #165d8e; }
+.geo-btn.loading { opacity: .7; pointer-events: none; }
+.geo-btn svg { flex-shrink: 0; }
+
+.geo-status {
+  margin-top: 8px;
+  font-size: .78rem;
+  text-align: center;
+  min-height: 1.2em;
+}
+.geo-status.ok { color: var(--green); }
+.geo-status.err { color: var(--red); }
+
+.addr-row {
+  display: flex;
+  gap: 8px;
+}
+.addr-input {
+  flex: 1;
+  padding: 11px 12px;
+  border: 2px solid var(--gray-light);
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: .88rem;
+  transition: border-color .2s;
+  outline: none;
+}
+.addr-input:focus { border-color: var(--blue); }
+.addr-input::placeholder { color: #aaa; }
+.addr-go {
+  padding: 0 18px;
+  border: none;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #fff;
+  font-family: inherit;
+  font-weight: 700;
+  font-size: .88rem;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background .2s;
+}
+.addr-go:hover { background: #b8620a; }
+.addr-hint {
+  font-size: .72rem;
+  color: var(--gray);
+  margin-top: 6px;
+  line-height: 1.4;
+}
+
+/* === SORT BAR === */
+.sort-bar {
+  display: flex;
+  gap: 6px;
+  padding: 0 12px;
+  margin-bottom: 10px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.sort-bar::-webkit-scrollbar { display: none; }
+.sort-chip {
+  flex-shrink: 0;
+  padding: 7px 14px;
+  border: 1.5px solid var(--gray-light);
+  border-radius: 20px;
+  background: var(--card);
+  font-family: inherit;
+  font-size: .78rem;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--gray);
+  transition: all .2s;
+}
+.sort-chip.active {
+  border-color: var(--navy);
+  background: var(--navy);
+  color: #fff;
+}
+
+/* === COUNTER === */
+.counter {
+  padding: 0 16px;
+  margin-bottom: 8px;
+  font-size: .76rem;
+  color: var(--gray);
+}
+
+/* === CARDS === */
+.cards { padding: 0 12px 80px; }
+.card {
+  background: var(--card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  margin-bottom: 12px;
+  overflow: hidden;
+  transition: box-shadow .2s;
+}
+.card:hover { box-shadow: var(--shadow-lg); }
+
+.card-top {
+  display: flex;
+  align-items: flex-start;
+  padding: 14px 14px 0;
+  gap: 10px;
+}
+.card-rank {
+  width: 30px; height: 30px;
+  border-radius: 50%;
+  background: var(--navy);
+  color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-size: .78rem;
+  font-weight: 700;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.card-header { flex: 1; min-width: 0; }
+.card-name {
+  font-family: 'Fraunces', serif;
+  font-size: 1.08rem;
+  color: var(--navy);
+  line-height: 1.25;
+}
+.card-mentions {
+  display: inline-block;
+  font-size: .68rem;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 4px;
+  margin-left: 4px;
+  vertical-align: middle;
+}
+.m3 { background: #fef3c7; color: #92400e; }
+.m2 { background: #e0e7ff; color: #3730a3; }
+.m1 { background: #f3f4f6; color: #6b7280; }
+
+.card-dist {
+  font-size: .82rem;
+  font-weight: 700;
+  color: var(--accent);
+  white-space: nowrap;
+  text-align: right;
+  flex-shrink: 0;
+}
+.card-dist small {
+  display: block;
+  font-weight: 400;
+  font-size: .68rem;
+  color: var(--gray);
+}
+
+.card-meta {
+  padding: 6px 14px 0 54px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: .72rem;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 6px;
+}
+.badge-rating { background: #fef9c3; color: #854d0e; }
+.badge-open { background: var(--green-light); color: var(--green); }
+.badge-closed { background: var(--red-light); color: var(--red); }
+.badge-area { background: #f0f0f0; color: #444; }
+
+.card-body {
+  padding: 10px 14px 0 54px;
+}
+.card-dish {
+  font-size: .82rem;
+  line-height: 1.4;
+  margin-bottom: 4px;
+}
+.card-dish strong { color: var(--accent); }
+.card-notes {
+  font-size: .78rem;
+  color: var(--gray);
+  line-height: 1.45;
+}
+.card-hours-toggle {
+  border: none;
+  background: none;
+  color: var(--blue);
+  font-family: inherit;
+  font-size: .76rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 4px 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+.card-hours {
+  display: none;
+  font-size: .74rem;
+  color: #555;
+  line-height: 1.6;
+  padding: 4px 0 2px;
+  columns: 2;
+  column-gap: 12px;
+}
+.card-hours.show { display: block; }
+.card-hours .today { font-weight: 700; color: var(--navy); }
+
+.card-actions {
+  display: flex;
+  gap: 6px;
+  padding: 10px 14px 14px 54px;
+  flex-wrap: wrap;
+}
+.act-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 12px;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: .76rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: transform .1s, opacity .15s;
+  border: none;
+  cursor: pointer;
+}
+.act-btn:active { transform: scale(.95); }
+.act-map { background: #e8f0fe; color: #1a56db; }
+.act-menu { background: var(--accent-light); color: var(--accent); }
+.act-dir { background: var(--green-light); color: var(--green); }
+
+/* === NO-LOC OVERLAY === */
+.no-loc-msg {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--gray);
+  font-size: .88rem;
+  line-height: 1.5;
+}
+.no-loc-msg .arrow { font-size: 2rem; margin-bottom: 8px; display: block; }
+
+/* === FILTER === */
+.filter-row {
+  display: flex;
+  gap: 6px;
+  padding: 10px 12px 6px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.filter-row::-webkit-scrollbar { display: none; }
+.filter-chip {
+  flex-shrink: 0;
+  padding: 6px 12px;
+  border: 1.5px solid var(--gray-light);
+  border-radius: 20px;
+  background: var(--card);
+  font-family: inherit;
+  font-size: .74rem;
+  cursor: pointer;
+  color: var(--gray);
+  transition: all .2s;
+}
+.filter-chip.active {
+  border-color: var(--accent);
+  background: var(--accent-light);
+  color: var(--accent);
+}
+
+/* === ANIM === */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.card { animation: fadeUp .35s ease both; }
+.card:nth-child(2) { animation-delay: .04s; }
+.card:nth-child(3) { animation-delay: .08s; }
+.card:nth-child(4) { animation-delay: .12s; }
+.card:nth-child(5) { animation-delay: .16s; }
+
+/* === RESPONSIVE === */
+@media(min-width:600px){
+  .cards { max-width: 560px; margin: 0 auto; }
+  .loc-panel, .sort-bar, .filter-row, .counter { max-width: 560px; margin-left: auto; margin-right: auto; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🇬🇷 Athens Eats</h1>
+  <div class="sub">20 local spots · sorted by distance & rating</div>
+</header>
+
+<!-- LOCATION PANEL -->
+<div class="loc-panel">
+  <div class="loc-tabs">
+    <button class="loc-tab active" data-tab="gps" onclick="switchTab('gps')">📍 My Location</button>
+    <button class="loc-tab" data-tab="addr" onclick="switchTab('addr')">🔎 Search Address</button>
+  </div>
+  <div class="loc-content" id="tab-gps">
+    <button class="geo-btn" id="geoBtn" onclick="getMyLocation()">
+      <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3"/><circle cx="12" cy="12" r="8"/></svg>
+      Use my current location
+    </button>
+    <div class="geo-status" id="geoStatus"></div>
+  </div>
+  <div class="loc-content" id="tab-addr" hidden>
+    <div class="addr-row">
+      <input class="addr-input" id="addrInput" placeholder="Paste Google Maps link, address, or coordinates" 
+             onkeydown="if(event.key==='Enter')parseAddress()">
+      <button class="addr-go" onclick="parseAddress()">Go</button>
+    </div>
+    <div class="addr-hint">Accepts: <b>Google Maps links</b> (long or short), landmark names (<b>Syntagma</b>, <b>Koukaki</b>…), street addresses, or GPS coordinates (<b>37.975, 23.735</b>).</div>
+    <div class="geo-status" id="addrStatus"></div>
+  </div>
+</div>
+
+<!-- FILTER -->
+<div class="filter-row" id="filterRow">
+  <button class="filter-chip active" data-f="all" onclick="setFilter('all')">All (20)</button>
+  <button class="filter-chip" data-f="souvlaki" onclick="setFilter('souvlaki')">🥙 Souvlaki</button>
+  <button class="filter-chip" data-f="taverna" onclick="setFilter('taverna')">🍷 Taverna</button>
+  <button class="filter-chip" data-f="meze" onclick="setFilter('meze')">🫒 Meze / Ouzeri</button>
+  <button class="filter-chip" data-f="other" onclick="setFilter('other')">🥧 Other</button>
+  <button class="filter-chip" data-f="open" onclick="setFilter('open')">✅ Open Now</button>
+</div>
+
+<!-- SORT -->
+<div class="sort-bar" id="sortBar">
+  <button class="sort-chip active" data-s="distance" onclick="setSort('distance')">📍 Nearest</button>
+  <button class="sort-chip" data-s="rating" onclick="setSort('rating')">⭐ Best Rated</button>
+  <button class="sort-chip" data-s="mentions" onclick="setSort('mentions')">🔥 Most Mentioned</button>
+  <button class="sort-chip" data-s="cheap" onclick="setSort('cheap')">💰 Cheapest</button>
+</div>
+
+<div class="counter" id="counter"></div>
+
+<!-- CARDS -->
+<div class="cards" id="cards"></div>
+
+<script>
+// ======================== DATA ========================
+const PLACES = [
+  {
+    name: "Karamanlidika",
+    lat: 37.9802444, lng: 23.7256423,
+    placeId: "ChIJ7z1TkSS9oRQRJTycL4l8QlM",
+    mentions: 3,
+    rating: 4.7,
+    ratingCount: 13107,
+    price: 2,
+    cat: "meze",
+    area: "Evripidou St",
+    dish: "Pastourma with fried eggs · signature sausage · meatballs",
+    notes: "Deli + restaurant. Greek-Anatolian cured meats & cheeses. Complimentary ham & cheese on arrival. Feels like an old butcher shop.",
+    hours: ["Mon: 9 AM–11 PM","Tue: 9 AM–11 PM","Wed: 9 AM–11 PM","Thu: 9 AM–11 PM","Fri: 9 AM–11 PM","Sat: 9 AM–11 PM","Sun: Closed"],
+    parsedH: [[9,23],[9,23],[9,23],[9,23],[9,23],[9,23],null],
+    website: "https://karamanlidika.gr",
+    menu: "https://karamanlidika.gr"
+  },
+  {
+    name: "Tavern Klimataria",
+    lat: 37.9806001, lng: 23.724632,
+    placeId: "ChIJkW6XYCS9oRQRVKWbEwZF9JY",
+    mentions: 3,
+    rating: 4.4,
+    ratingCount: 8994,
+    price: 2,
+    cat: "taverna",
+    area: "Platia Theatrou",
+    dish: "Lamb with potatoes · stuffed cabbage · house wine by the kilo",
+    notes: "Old-school taverna with live rebetiko music. Huge portions at very fair prices. Book ahead on weekends. ~€10–20/person.",
+    hours: ["Mon: 11 AM–11 PM","Tue: 12 PM–12:30 AM","Wed: 12 PM–12:30 AM","Thu: 12 PM–12:30 AM","Fri: 12 PM–1 AM","Sat: 12 PM–1 AM","Sun: 12 PM–1 AM"],
+    parsedH: [[11,23],[12,24.5],[12,24.5],[12,24.5],[12,25],[12,25],[12,25]],
+    website: "https://www.klimataria.gr",
+    menu: "https://www.klimataria.gr"
+  },
+  {
+    name: "Aspro Alogo (White Horse)",
+    lat: 37.974837, lng: 23.7312804,
+    placeId: "ChIJASvdpD29oRQR0a1ar9x1Q4s",
+    mentions: 3,
+    rating: 4.7,
+    ratingCount: 6373,
+    price: 1,
+    cat: "souvlaki",
+    area: "Near Monastiraki",
+    dish: "Souvlaki with pita · spicy yogurt spread",
+    notes: "Tiny mom-and-pop run by Markos. Free halva & water after your meal. Full meal under €10. Locals' top pick.",
+    hours: ["Mon: 9 AM–5 PM, 7–12 PM","Tue: 9 AM–5 PM, 7–12 PM","Wed: 9 AM–5 PM, 7–12 PM","Thu: 9 AM–5 PM, 7–12 PM","Fri: 9 AM–5 PM, 7–12 PM","Sat: 9 AM–5 PM, 7–12 PM","Sun: 9 AM–5 PM, 7–12 PM"],
+    parsedH: [[9,24],[9,24],[9,24],[9,24],[9,24],[9,24],[9,24]],
+    website: "https://www.facebook.com/ASPRO-65290233468/",
+    menu: null
+  },
+  {
+    name: "Kostas Souvlaki",
+    lat: 37.9743092, lng: 23.7340767,
+    placeId: "ChIJQ6OOtj29oRQRp4-g2axknUU",
+    mentions: 2,
+    rating: 4.4,
+    ratingCount: 2682,
+    price: 1,
+    cat: "souvlaki",
+    area: "Syntagma / Filellinon",
+    dish: "Classic pork souvlaki in pita (old-school style, no fries)",
+    notes: "Family-run since the 1950s. Tiny, no-frills. Often sells out by 3 PM — go early! Expect a queue. ~€3–5.",
+    hours: ["Mon: 10:25 AM–3:45 PM","Tue: 10:25 AM–3:45 PM","Wed: 10:25 AM–3:45 PM","Thu: 10:25 AM–3:45 PM","Fri: 10:25 AM–3:45 PM","Sat: 10:25 AM–3:45 PM","Sun: Closed"],
+    parsedH: [[10.4,15.75],[10.4,15.75],[10.4,15.75],[10.4,15.75],[10.4,15.75],[10.4,15.75],null],
+    website: null,
+    menu: null
+  },
+  {
+    name: "Diporto",
+    lat: 37.9807478, lng: 23.7258382,
+    placeId: "ChIJW25h6SS9oRQRajkTKiKmQVg",
+    mentions: 2,
+    rating: 4.4,
+    ratingCount: 2832,
+    price: 1,
+    cat: "taverna",
+    area: "Near Central Market",
+    dish: "Chickpea stew · sardines · Greek salad (no menu — chef decides)",
+    notes: "No sign, no menu. Walk down stairs into a basement with giant wine barrels. The waiter tells you what was cooked that morning. Raw, historic, very cheap.",
+    hours: ["Mon: 8 AM–7 PM","Tue: 8 AM–7 PM","Wed: 8 AM–7 PM","Thu: 8 AM–7 PM","Fri: 8 AM–7 PM","Sat: 8 AM–7 PM","Sun: Closed"],
+    parsedH: [[8,19],[8,19],[8,19],[8,19],[8,19],[8,19],null],
+    website: null,
+    menu: null
+  },
+  {
+    name: "MIRONI Restaurant",
+    lat: 37.9846499, lng: 23.7214077,
+    placeId: "ChIJlYeHnSa9oRQR5llP5YIr4dI",
+    mentions: 2,
+    rating: 4.8,
+    ratingCount: 5472,
+    price: 2,
+    cat: "taverna",
+    area: "Metaxourgio",
+    dish: "Moussaka · lamb with lemon sauce · zucchini croquettes",
+    notes: "Live music some evenings. Free dessert & shots with the bill. Tables packed close. Open daily until 1 AM. ~€15–25/person.",
+    hours: ["Mon: 12 PM–1 AM","Tue: 12 PM–1 AM","Wed: 12 PM–1 AM","Thu: 12 PM–1 AM","Fri: 12 PM–1 AM","Sat: 12 PM–1 AM","Sun: 12 PM–1 AM"],
+    parsedH: [[12,25],[12,25],[12,25],[12,25],[12,25],[12,25],[12,25]],
+    website: "http://mironi.gr",
+    menu: "http://mironi.gr"
+  },
+  {
+    name: "Mezze Athens",
+    lat: 37.9753087, lng: 23.7327944,
+    placeId: "ChIJ4bvh_zy9oRQRRSrNFuq_rzg",
+    mentions: 2,
+    rating: 4.6,
+    ratingCount: 1527,
+    price: 2,
+    cat: "meze",
+    area: "Mitropoleos St",
+    dish: "Salmon gyros · fried calamari · sharing meze plates",
+    notes: "Meze-focused, casual. Order 3–4 plates + house wine to keep it reasonable. Complimentary dessert.",
+    hours: ["Mon: 8 AM–1 AM","Tue: 8 AM–1 AM","Wed: 8 AM–1 AM","Thu: 8 AM–1 AM","Fri: 8 AM–1 AM","Sat: 8 AM–1 AM","Sun: 8 AM–1 AM"],
+    parsedH: [[8,25],[8,25],[8,25],[8,25],[8,25],[8,25],[8,25]],
+    website: "https://www.mezzeathens.gr",
+    menu: "https://www.mezzeathens.gr"
+  },
+  {
+    name: "The New Era",
+    lat: 37.9767389, lng: 23.7312451,
+    placeId: "ChIJwQ2z7ea9oRQRxA6wLkeHr_0",
+    mentions: 1,
+    rating: 4.9,
+    ratingCount: 1705,
+    price: 1,
+    cat: "taverna",
+    area: "Perikleous St",
+    dish: "Moussaka · fried feta triangles with honey",
+    notes: "4.9★! Family-run, owner Christine helps you choose. Big portions, great prices, free dessert.",
+    hours: ["Mon: 12 PM–11:30 PM","Tue: 12 PM–11:30 PM","Wed: 12 PM–11:30 PM","Thu: 12 PM–11:30 PM","Fri: 12 PM–11:30 PM","Sat: 12 PM–11:30 PM","Sun: 12 PM–11:30 PM"],
+    parsedH: [[12,23.5],[12,23.5],[12,23.5],[12,23.5],[12,23.5],[12,23.5],[12,23.5]],
+    website: null,
+    menu: null
+  },
+  {
+    name: "Sarri's Souvlaki",
+    lat: 37.9788749, lng: 23.722059,
+    placeId: "ChIJo2AlW7-9oRQRjKow1T0xIF8",
+    mentions: 1,
+    rating: 4.8,
+    ratingCount: 1036,
+    price: 1,
+    cat: "souvlaki",
+    area: "Psyrri (quiet side)",
+    dish: "Pork kontosouvli pita · chicken skewers",
+    notes: "Off the tourist radar. Outstanding tzatziki. Friendly owner, complimentary raki. Very affordable.",
+    hours: ["Mon: 12 PM–1 AM","Tue: 12 PM–1 AM","Wed: 12 PM–1 AM","Thu: 12 PM–1 AM","Fri: 12 PM–1 AM","Sat: 12 PM–1 AM","Sun: 12 PM–1 AM"],
+    parsedH: [[12,25],[12,25],[12,25],[12,25],[12,25],[12,25],[12,25]],
+    website: null,
+    menu: null
+  },
+  {
+    name: "Delicious Souvlaki",
+    lat: 37.9837429, lng: 23.7270681,
+    placeId: "ChIJE-L3ViW9oRQRPK0ccOb6aZM",
+    mentions: 1,
+    rating: 4.8,
+    ratingCount: 2587,
+    price: 1,
+    cat: "souvlaki",
+    area: "Omonia area",
+    dish: "Pork or chicken gyros · the family plate (~€20)",
+    notes: "Locals' favorite — people come back every night. Family plate feeds 4+. Open late.",
+    hours: ["Mon: 11 AM–12 AM","Tue: 11 AM–11:45 PM","Wed: 11 AM–12 AM","Thu: 11 AM–12 AM","Fri: 11 AM–12 AM","Sat: 11 AM–12 AM","Sun: 11 AM–11:30 PM"],
+    parsedH: [[11,24],[11,23.75],[11,24],[11,24],[11,24],[11,24],[11,23.5]],
+    website: "https://m.facebook.com/delicioussouvlaki",
+    menu: null
+  },
+  {
+    name: "Meat the Greek",
+    lat: 37.9758338, lng: 23.7305301,
+    placeId: "ChIJW90X_pe9oRQRthxDULgXaM8",
+    mentions: 1,
+    rating: 4.7,
+    ratingCount: 4673,
+    price: 2,
+    cat: "souvlaki",
+    area: "Near Syntagma",
+    dish: "Pork or chicken gyros · spicy feta dip",
+    notes: "Trendy but affordable. Owner Dasos is very welcoming. Closed Sundays.",
+    hours: ["Mon: 12 PM–12 AM","Tue: 12 PM–12 AM","Wed: 12 PM–12 AM","Thu: 12 PM–12 AM","Fri: 12 PM–12 AM","Sat: 12 PM–12 AM","Sun: Closed"],
+    parsedH: [[12,24],[12,24],[12,24],[12,24],[12,24],[12,24],null],
+    website: "http://www.meatthegreek.gr",
+    menu: "http://www.meatthegreek.gr"
+  },
+  {
+    name: "To Triantafyllo tis Nostimias",
+    lat: 37.9771723, lng: 23.7317341,
+    placeId: "ChIJEY_DbTy9oRQRkCYLCFnAJts",
+    mentions: 1,
+    rating: 4.5,
+    ratingCount: 1409,
+    price: 2,
+    cat: "meze",
+    area: "Near Syntagma",
+    dish: "Meze plates (ouzeri-style) · moussaka · fried bait fish",
+    notes: "Hidden inside a nondescript office arcade. Classic ouzeri. Feels like a secret club for local workers. Very cheap.",
+    hours: ["Mon: 12 PM–8 PM","Tue: 12 PM–10 PM","Wed: 12 PM–10 PM","Thu: 12 PM–10 PM","Fri: 12 PM–10 PM","Sat: 12 PM–10 PM","Sun: 12 PM–8 PM"],
+    parsedH: [[12,20],[12,22],[12,22],[12,22],[12,22],[12,22],[12,20]],
+    website: null,
+    menu: null
+  },
+  {
+    name: "Feyrouz",
+    lat: 37.9780802, lng: 23.7276515,
+    placeId: "ChIJb8cKsjy9oRQRVIceKfoicHM",
+    mentions: 1,
+    rating: 4.8,
+    ratingCount: 5813,
+    price: 1,
+    cat: "other",
+    area: "Central Athens",
+    dish: "Lahmajoun · pide · red lentil soup · kunefe",
+    notes: "Levantine street food, famous among Athenians. Incredibly high quality at very low prices. Closed Sundays.",
+    hours: ["Mon: 12 PM–10 PM","Tue: 12 PM–10 PM","Wed: 12 PM–10 PM","Thu: 12 PM–10 PM","Fri: 12 PM–10 PM","Sat: 12 PM–10 PM","Sun: Closed"],
+    parsedH: [[12,22],[12,22],[12,22],[12,22],[12,22],[12,22],null],
+    website: null,
+    menu: null
+  },
+  {
+    name: "Ariston",
+    lat: 37.9766869, lng: 23.7326434,
+    placeId: "ChIJoXl9Fzy9oRQRoarLYU_X9b8",
+    mentions: 1,
+    rating: 4.5,
+    ratingCount: 1186,
+    price: 1,
+    cat: "other",
+    area: "Voulis 10 / Syntagma",
+    dish: "Kourou cheese pie · spinach pie",
+    notes: "Historic bakery (est. ~1910). Grab-and-go. Pies from €1.80. Closed Sundays.",
+    hours: ["Mon: 7:30 AM–6 PM","Tue: 7:30 AM–8 PM","Wed: 7:30 AM–6 PM","Thu: 7:30 AM–8 PM","Fri: 7:30 AM–8 PM","Sat: 7:30 AM–6 PM","Sun: Closed"],
+    parsedH: [[7.5,18],[7.5,20],[7.5,18],[7.5,20],[7.5,20],[7.5,18],null],
+    website: null,
+    menu: null
+  },
+  {
+    name: "Seychelles",
+    lat: 37.9822383, lng: 23.7202502,
+    placeId: "ChIJF81tjSa9oRQR-YzddOp6Lz8",
+    mentions: 1,
+    rating: 4.4,
+    ratingCount: 5341,
+    price: 2,
+    cat: "taverna",
+    area: "Keramikos",
+    dish: "Chilopites pasta · beef pappardelle · daily specials",
+    notes: "Modern twist on traditional Greek. Uses small-producer ingredients from across Greece. Reservations recommended.",
+    hours: ["Mon: 1:30 PM–11:30 PM","Tue: 1:30 PM–11:30 PM","Wed: 1:30 PM–11:30 PM","Thu: 1:30 PM–11:30 PM","Fri: 1:30 PM–11:30 PM","Sat: 1:30 PM–11:30 PM","Sun: 1:30 PM–11:30 PM"],
+    parsedH: [[13.5,23.5],[13.5,23.5],[13.5,23.5],[13.5,23.5],[13.5,23.5],[13.5,23.5],[13.5,23.5]],
+    website: null,
+    menu: null
+  },
+  {
+    name: "Krasopoulio tou Kokkora",
+    lat: 37.9777196, lng: 23.7241607,
+    placeId: "ChIJjWbppSO9oRQRtMcStGxrZEs",
+    mentions: 1,
+    rating: 4.7,
+    ratingCount: 3279,
+    price: 1,
+    cat: "meze",
+    area: "Psyrri",
+    dish: "Homemade souvlaki · moussaka · sharing meze with wine",
+    notes: "Nice for sharing dishes. Good house wine. Closed Wednesdays. Free dessert & shots. ~€15–20/person.",
+    hours: ["Mon: 2:30 PM–10:30 PM","Tue: 4 PM–10:30 PM","Wed: Closed","Thu: 2:30 PM–10:30 PM","Fri: 2:30 PM–10:30 PM","Sat: 12:30 PM–10:45 PM","Sun: 12:30 PM–10:45 PM"],
+    parsedH: [[14.5,22.5],[16,22.5],null,[14.5,22.5],[14.5,22.5],[12.5,22.75],[12.5,22.75]],
+    website: null,
+    menu: null
+  },
+  {
+    name: "Aerides (Plaka)",
+    lat: 37.9744613, lng: 23.7279885,
+    placeId: "ChIJ9Vow4-a9oRQRXoz353RJED8",
+    mentions: 1,
+    rating: 4.7,
+    ratingCount: 2178,
+    price: 2,
+    cat: "taverna",
+    area: "Plaka (quiet alley)",
+    dish: "Grilled octopus · giouvetsi · sharing plates",
+    notes: "One of the few good spots in touristy Plaka. Complimentary orange cake & digestif at the end.",
+    hours: ["Mon: 10 AM–12 AM","Tue: 10 AM–12 AM","Wed: 10 AM–12 AM","Thu: 10 AM–12 AM","Fri: 10 AM–12 AM","Sat: 10 AM–12 AM","Sun: 10 AM–12 AM"],
+    parsedH: [[10,24],[10,24],[10,24],[10,24],[10,24],[10,24],[10,24]],
+    website: null,
+    menu: null
+  },
+  {
+    name: "Epirus Tavern",
+    lat: 37.9800134, lng: 23.7280162,
+    placeId: "ChIJcSuHNTu9oRQRIaYe-EqVT3o",
+    mentions: 1,
+    rating: null,
+    ratingCount: null,
+    price: 2,
+    cat: "other",
+    area: "Inside Central Market",
+    dish: "Patsas (tripe soup) · hearty stews",
+    notes: "Est. 1898. Inside the meat market. Maximum local atmosphere. Fresh, fast, very cheap. Adventurous eaters! Closed Sundays.",
+    hours: ["Mon: 6 AM–7:30 PM","Tue: 6 AM–7:30 PM","Wed: 6 AM–7:30 PM","Thu: 6 AM–7:30 PM","Fri: 6 AM–7:30 PM","Sat: 6 AM–7:30 PM","Sun: Closed"],
+    parsedH: [[6,19.5],[6,19.5],[6,19.5],[6,19.5],[6,19.5],[6,19.5],null],
+    website: null,
+    menu: null
+  },
+  {
+    name: "O Thanasis",
+    lat: 37.9762894, lng: 23.7264863,
+    placeId: "ChIJhUde3iK9oRQRkAOW2b5qIO0",
+    mentions: 1,
+    rating: 4.2,
+    ratingCount: 17386,
+    price: 2,
+    cat: "souvlaki",
+    area: "Monastiraki",
+    dish: "Kebab (ground meat) · yogurt kebab · moussaka",
+    notes: "Near the tourist core but still solid. Known for ground-meat kebab specifically. Open late daily.",
+    hours: ["Mon: 10 AM–2 AM","Tue: 10 AM–2 AM","Wed: 10 AM–2 AM","Thu: 10 AM–2 AM","Fri: 10 AM–2 AM","Sat: 10 AM–2 AM","Sun: 10 AM–2 AM"],
+    parsedH: [[10,26],[10,26],[10,26],[10,26],[10,26],[10,26],[10,26]],
+    website: null,
+    menu: null
+  },
+  {
+    name: "Tsipouradiko tou Lolou",
+    lat: 37.9633025, lng: 23.7217513,
+    placeId: "ChIJAxiYYgO9oRQRQxY5lcpr7EY",
+    mentions: 1,
+    rating: 4.6,
+    ratingCount: 3568,
+    price: 1,
+    cat: "meze",
+    area: "Koukaki",
+    dish: "Sharing meze plates · grilled sausages · baked feta",
+    notes: "Relaxed 'home cooking' vibe. Great for slow eating with tsipouro. Very local — often a queue!",
+    hours: ["Mon: 8 AM–12 AM","Tue: 8 AM–12 AM","Wed: 8 AM–12 AM","Thu: 8 AM–12 AM","Fri: 8 AM–12 AM","Sat: 8 AM–12 AM","Sun: 8 AM–12 AM"],
+    parsedH: [[8,24],[8,24],[8,24],[8,24],[8,24],[8,24],[8,24]],
+    website: null,
+    menu: null
+  }
+];
+
+// ======================== STATE ========================
+let userLat = null, userLng = null;
+let currentSort = 'distance';
+let currentFilter = 'all';
+
+// ======================== TABS ========================
+function switchTab(tab) {
+  document.querySelectorAll('.loc-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+  document.getElementById('tab-gps').hidden = tab !== 'gps';
+  document.getElementById('tab-addr').hidden = tab !== 'addr';
+}
+
+// ======================== GEOLOCATION ========================
+function getMyLocation() {
+  const btn = document.getElementById('geoBtn');
+  const st = document.getElementById('geoStatus');
+  if (!navigator.geolocation) {
+    st.className = 'geo-status err';
+    st.textContent = 'Geolocation not supported by this browser.';
+    return;
+  }
+  btn.classList.add('loading');
+  btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="3"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3"/><circle cx="12" cy="12" r="8"/></svg> Locating…';
+  st.className = 'geo-status'; st.textContent = '';
+
+  navigator.geolocation.getCurrentPosition(
+    pos => {
+      userLat = pos.coords.latitude;
+      userLng = pos.coords.longitude;
+      btn.classList.remove('loading');
+      btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="3"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3"/><circle cx="12" cy="12" r="8"/></svg> Refresh my location';
+      st.className = 'geo-status ok';
+      st.textContent = `✓ Got your location (${userLat.toFixed(4)}, ${userLng.toFixed(4)})`;
+      render();
+    },
+    err => {
+      btn.classList.remove('loading');
+      btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="3"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3"/><circle cx="12" cy="12" r="8"/></svg> Try again';
+      st.className = 'geo-status err';
+      const isInsecure = location.protocol === 'file:' || location.protocol === 'http:';
+      if (isInsecure) {
+        st.textContent = 'Location requires HTTPS. Use the Address tab instead and paste your address or coordinates.';
+      } else if (err.code === 1) {
+        st.textContent = 'Permission denied. Please allow location access in your browser settings.';
+      } else {
+        st.textContent = 'Could not get location. Try the Address tab instead.';
+      }
+    },
+    { enableHighAccuracy: true, timeout: 10000 }
+  );
+}
+
+// ======================== ADDRESS / COORDS ========================
+const LANDMARKS = {
+  'syntagma': [37.9755, 23.7348], 'syntagma square': [37.9755, 23.7348],
+  'monastiraki': [37.9764, 23.7258], 'monastiraki square': [37.9764, 23.7258],
+  'acropolis': [37.9715, 23.7267], 'akropolis': [37.9715, 23.7267],
+  'plaka': [37.9730, 23.7300], 'psyrri': [37.9790, 23.7240], 'psiri': [37.9790, 23.7240],
+  'exarchia': [37.9870, 23.7340], 'exarcheia': [37.9870, 23.7340],
+  'koukaki': [37.9640, 23.7230], 'pangrati': [37.9700, 23.7460],
+  'omonia': [37.9840, 23.7280], 'omonia square': [37.9840, 23.7280],
+  'thissio': [37.9760, 23.7200], 'thisseio': [37.9760, 23.7200], 'thiseio': [37.9760, 23.7200],
+  'kerameikos': [37.9785, 23.7175], 'keramikos': [37.9785, 23.7175],
+  'metaxourgio': [37.9850, 23.7210], 'gazi': [37.9780, 23.7150],
+  'victoria': [37.9900, 23.7310], 'kolonaki': [37.9770, 23.7410],
+  'central market': [37.9800, 23.7270], 'varvakios': [37.9800, 23.7270],
+  'temple of zeus': [37.9693, 23.7332], 'zappeion': [37.9700, 23.7368],
+  'lycabettus': [37.9820, 23.7450], 'lykavittos': [37.9820, 23.7450],
+  'national garden': [37.9730, 23.7380], 'piraeus': [37.9475, 23.6430],
+  'kifissia': [38.0740, 23.8110], 'glyfada': [37.8620, 23.7530],
+  'neos kosmos': [37.9580, 23.7260], 'neo kosmo': [37.9580, 23.7260],
+  'petralona': [37.9680, 23.7100], 'filopappou': [37.9680, 23.7200],
+  'hilton athens': [37.9765, 23.7460], 'larissa station': [37.9920, 23.7210],
+  'athens airport': [37.9364, 23.9445],
+};
+
+async function parseAddress() {
+  const raw = document.getElementById('addrInput').value.trim();
+  const st = document.getElementById('addrStatus');
+  if (!raw) return;
+
+  // ---- 1. Google Maps URL (full or short) ----
+  const isGmapsUrl = /google\.com\/maps|maps\.app\.goo\.gl|goo\.gl\/maps|maps\.google/i.test(raw);
+  if (isGmapsUrl) {
+    st.className = 'geo-status';
+    st.textContent = 'Resolving Google Maps link\u2026';
+
+    // Try to extract coords directly from a full URL first
+    const directCoords = extractCoordsFromGmapsUrl(raw);
+    if (directCoords) {
+      userLat = directCoords[0];
+      userLng = directCoords[1];
+      st.className = 'geo-status ok';
+      st.textContent = '\u2713 Got location from Maps link (' + userLat.toFixed(4) + ', ' + userLng.toFixed(4) + ')';
+      render();
+      return;
+    }
+
+    // For short links, use a CORS proxy to resolve the redirect server-side
+    // (avoids the mobile issue where window.open launches the native Maps app)
+    st.textContent = 'Resolving short link\u2026';
+    const resolved = await resolveViaProxy(raw);
+    if (resolved) {
+      const coords = extractCoordsFromGmapsUrl(resolved);
+      if (coords) {
+        userLat = coords[0];
+        userLng = coords[1];
+        st.className = 'geo-status ok';
+        st.textContent = '\u2713 Got location from Maps link (' + userLat.toFixed(4) + ', ' + userLng.toFixed(4) + ')';
+        render();
+        return;
+      }
+    }
+
+    // Proxy failed — show a mobile-friendly fallback
+    st.className = 'geo-status err';
+    st.innerHTML = `
+      <div style="line-height:1.5">
+        Couldn't resolve this link automatically.<br>
+        <b>On your phone:</b> Open Google Maps, find your spot, tap <b>Share</b> → <b>Copy link</b> to get a fresh short link and try again, 
+        or tap the location pin and copy the GPS coordinates (e.g. <b>37.9755, 23.7348</b>) and paste those instead.
+      </div>`;
+    return;
+  }
+
+  // ---- 2. Raw coordinates ----
+  const coordMatch = raw.match(/^(-?\d+\.?\d*)\s*[,;\s]\s*(-?\d+\.?\d*)$/);
+  if (coordMatch) {
+    userLat = parseFloat(coordMatch[1]);
+    userLng = parseFloat(coordMatch[2]);
+    st.className = 'geo-status ok';
+    st.textContent = '\u2713 Using coordinates (' + userLat.toFixed(4) + ', ' + userLng.toFixed(4) + ')';
+    render();
+    return;
+  }
+
+  // ---- 3. Known landmarks ----
+  const key = raw.toLowerCase().replace(/[,.']+/g, '').trim();
+  for (const [name, coords] of Object.entries(LANDMARKS)) {
+    if (key.includes(name) || name.includes(key)) {
+      userLat = coords[0];
+      userLng = coords[1];
+      st.className = 'geo-status ok';
+      st.textContent = '\u2713 Using location: ' + name.charAt(0).toUpperCase() + name.slice(1) + ' (' + userLat.toFixed(4) + ', ' + userLng.toFixed(4) + ')';
+      render();
+      return;
+    }
+  }
+
+  // ---- 4. Nominatim geocoding fallback ----
+  st.className = 'geo-status';
+  st.textContent = 'Looking up address\u2026';
+
+  // Normalize mixed-language addresses: strip diacritics, translate common local spellings
+  function normalizeAddr(s) {
+    return s
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/\bGr[e\xE9]cko\b|\bGrecia\b|\bGriechenland\b|\bGriekenland\b/gi, 'Greece')
+      .replace(/\bAthin[a]?\b|\bAten[a]?\b/gi, 'Athens')
+      .replace(/\s{2,}/g, ' ').trim();
+  }
+
+  const normalized = normalizeAddr(raw);
+  const alreadyLocated = /athens|greece/i.test(normalized);
+  const queries = alreadyLocated
+    ? [normalized]
+    : [normalized + ', Athens, Greece', normalized + ', Greece'];
+
+  try {
+    let data = [];
+    for (const q of queries) {
+      const resp = await fetch('https://nominatim.openstreetmap.org/search?q=' + encodeURIComponent(q) + '&format=json&limit=1&addressdetails=0');
+      data = await resp.json();
+      if (data.length > 0) break;
+    }
+    if (data.length === 0) {
+      st.className = 'geo-status err';
+      st.textContent = 'Not found. Try a landmark (Syntagma, Monastiraki) or GPS coords (37.975, 23.735).';
+      return;
+    }
+    userLat = parseFloat(data[0].lat);
+    userLng = parseFloat(data[0].lon);
+    st.className = 'geo-status ok';
+    st.textContent = '\u2713 Found: ' + data[0].display_name.substring(0, 60) + '\u2026';
+    render();
+  } catch (e) {
+    st.className = 'geo-status err';
+    st.textContent = 'Network error. Try a landmark name or paste GPS coordinates.';
+  }
+}
+
+// Extract lat/lng from various Google Maps URL formats
+function extractCoordsFromGmapsUrl(url) {
+  // Pattern 1: /@37.9755,23.7348,17z  (most common in full URLs)
+  let m = url.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
+  if (m) return [parseFloat(m[1]), parseFloat(m[2])];
+
+  // Pattern 2: ?q=37.9755,23.7348  or &q=...
+  m = url.match(/[?&]q=(-?\d+\.\d+),(-?\d+\.\d+)/);
+  if (m) return [parseFloat(m[1]), parseFloat(m[2])];
+
+  // Pattern 3: ?ll=37.9755,23.7348 or &ll=...
+  m = url.match(/[?&]ll=(-?\d+\.\d+),(-?\d+\.\d+)/);
+  if (m) return [parseFloat(m[1]), parseFloat(m[2])];
+
+  // Pattern 4: /place/.../ followed by data with coords
+  m = url.match(/!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/);
+  if (m) return [parseFloat(m[1]), parseFloat(m[2])];
+
+  // Pattern 5: query_place_id or just coords in path
+  m = url.match(/\/(-?\d+\.\d{4,}),(-?\d+\.\d{4,})/);
+  if (m) return [parseFloat(m[1]), parseFloat(m[2])];
+
+  return null;
+}
+
+// Resolve a short Google Maps URL using a CORS proxy to follow the redirect chain.
+// This works on mobile where window.open() launches the native Maps app instead of a browser tab.
+async function resolveViaProxy(shortUrl) {
+  function extractMapsUrlFromHtml(text) {
+    const m1 = text.match(/(?:canonical|og:url)[^>]*(?:href|content)="([^"]*google\.com\/maps[^"]*)"/i);
+    if (m1) return m1[1];
+    const m2 = text.match(/https?:\/\/(?:www\.)?google\.com\/maps\/[^\s"'<>]+@-?\d+\.\d+,-?\d+\.\d+[^\s"'<>]*/);
+    if (m2) return m2[0];
+    const m3 = text.match(/https?:\/\/(?:www\.)?google\.com\/maps\/[^\s"'<>]+!3d-?\d+\.\d+!4d-?\d+\.\d+[^\s"'<>]*/);
+    if (m3) return m3[0];
+    return null;
+  }
+
+  try {
+    const resp = await fetch('https://corsproxy.io/?url=' + encodeURIComponent(shortUrl), { signal: AbortSignal.timeout(10000) });
+    if (resp.ok) {
+      const text = await resp.text();
+      const finalHeader = resp.headers.get('x-final-url') || resp.headers.get('x-redirected-url') || '';
+      if (/google\.com\/maps/i.test(finalHeader)) return finalHeader;
+      const fromBody = extractMapsUrlFromHtml(text);
+      if (fromBody) return fromBody;
+      const metaRefresh = text.match(/content="\d+;\s*url=([^"]*google\.com[^"]*)"/i);
+      if (metaRefresh) return metaRefresh[1];
+      const jsRedirect = text.match(/(?:window\.location|location\.href)\s*=\s*["']([^"']*google\.com\/maps[^"']*)["']/i);
+      if (jsRedirect) return jsRedirect[1];
+    }
+  } catch (e) {}
+
+  try {
+    const resp = await fetch('https://api.allorigins.win/get?url=' + encodeURIComponent(shortUrl), { signal: AbortSignal.timeout(10000) });
+    if (resp.ok) {
+      const json = await resp.json();
+      const finalUrl = json && json.status && json.status.url ? json.status.url : '';
+      if (/google\.com\/maps/i.test(finalUrl)) return finalUrl;
+      const fromBody = extractMapsUrlFromHtml(json && json.contents ? json.contents : '');
+      if (fromBody) return fromBody;
+    }
+  } catch (e) {}
+
+  return null;
+}
+
+// ======================== DISTANCE ========================
+function haversine(lat1, lng1, lat2, lng2) {
+  const R = 6371000;
+  const toRad = d => d * Math.PI / 180;
+  const dLat = toRad(lat2 - lat1), dLng = toRad(lng2 - lng1);
+  const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+function fmtDist(m) {
+  if (m < 1000) return Math.round(m) + ' m';
+  return (m / 1000).toFixed(1) + ' km';
+}
+
+function walkTime(m) {
+  const min = Math.round(m / 80); // ~80m/min walking
+  if (min < 1) return '< 1 min walk';
+  return min + ' min walk';
+}
+
+// ======================== OPEN STATUS ========================
+function isOpenNow(p) {
+  const now = new Date();
+  // Athens is UTC+2 (EET) / UTC+3 (EEST). Use rough check:
+  const athensOffset = 2; // winter; summer would be 3
+  const utcH = now.getUTCHours() + now.getUTCMinutes() / 60;
+  // Determine if DST (last Sunday of March to last Sunday of October)
+  const month = now.getUTCMonth(); // 0-based
+  let isDST = false;
+  if (month > 2 && month < 9) isDST = true;
+  else if (month === 2) {
+    const lastSun = 31 - new Date(now.getUTCFullYear(), 3, 0).getDay();
+    if (now.getUTCDate() >= lastSun) isDST = true;
+  } else if (month === 9) {
+    const lastSun = 31 - new Date(now.getUTCFullYear(), 10, 0).getDay();
+    if (now.getUTCDate() < lastSun) isDST = true;
+  }
+  const offset = isDST ? 3 : 2;
+  const athensH = (utcH + offset) % 24;
+  const dayIdx = new Date(now.getTime() + offset * 3600000).getDay();
+  // Convert JS day (0=Sun) to our array (0=Mon)
+  const idx = dayIdx === 0 ? 6 : dayIdx - 1;
+  const slot = p.parsedH[idx];
+  if (!slot) return { open: false, label: 'Closed today' };
+  if (athensH >= slot[0] && athensH < slot[1]) {
+    const closesIn = slot[1] - athensH;
+    if (closesIn <= 1) return { open: true, label: `Open · closes soon` };
+    return { open: true, label: 'Open now' };
+  }
+  if (athensH < slot[0]) {
+    const opensIn = slot[0] - athensH;
+    if (opensIn <= 1.5) return { open: false, label: `Opens soon` };
+    return { open: false, label: `Opens at ${fmtHour(slot[0])}` };
+  }
+  return { open: false, label: 'Closed now' };
+}
+
+function fmtHour(h) {
+  const hh = Math.floor(h % 24);
+  const mm = Math.round((h % 1) * 60);
+  const ampm = hh >= 12 ? 'PM' : 'AM';
+  const h12 = hh === 0 ? 12 : hh > 12 ? hh - 12 : hh;
+  return mm === 0 ? `${h12} ${ampm}` : `${h12}:${String(mm).padStart(2,'0')} ${ampm}`;
+}
+
+// ======================== SORT & FILTER ========================
+function setSort(s) {
+  currentSort = s;
+  document.querySelectorAll('.sort-chip').forEach(c => c.classList.toggle('active', c.dataset.s === s));
+  render();
+}
+function setFilter(f) {
+  currentFilter = f;
+  document.querySelectorAll('.filter-chip').forEach(c => c.classList.toggle('active', c.dataset.f === f));
+  render();
+}
+
+// ======================== RENDER ========================
+function render() {
+  let list = PLACES.map(p => {
+    const d = (userLat !== null) ? haversine(userLat, userLng, p.lat, p.lng) : null;
+    return { ...p, dist: d, openStatus: isOpenNow(p) };
+  });
+
+  // Filter
+  if (currentFilter === 'open') {
+    list = list.filter(p => p.openStatus.open);
+  } else if (currentFilter !== 'all') {
+    list = list.filter(p => p.cat === currentFilter);
+  }
+
+  // Sort
+  list.sort((a, b) => {
+    switch (currentSort) {
+      case 'distance':
+        if (a.dist === null && b.dist === null) return (b.rating || 0) - (a.rating || 0);
+        if (a.dist === null) return 1;
+        if (b.dist === null) return -1;
+        return a.dist - b.dist;
+      case 'rating':
+        return (b.rating || 0) - (a.rating || 0);
+      case 'mentions':
+        if (b.mentions !== a.mentions) return b.mentions - a.mentions;
+        return (b.rating || 0) - (a.rating || 0);
+      case 'cheap':
+        if (a.price !== b.price) return a.price - b.price;
+        return (b.rating || 0) - (a.rating || 0);
+    }
+  });
+
+  document.getElementById('counter').textContent = `Showing ${list.length} of ${PLACES.length} places` + (userLat !== null ? ' · sorted from your location' : '');
+
+  const container = document.getElementById('cards');
+  if (list.length === 0) {
+    container.innerHTML = '<div class="no-loc-msg">No places match this filter right now.</div>';
+    return;
+  }
+
+  const today = new Date();
+  const dayIdx = (() => { const d = today.getDay(); return d === 0 ? 6 : d - 1; })();
+  const dayNames = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+
+  container.innerHTML = list.map((p, i) => {
+    const mClass = p.mentions >= 3 ? 'm3' : p.mentions >= 2 ? 'm2' : 'm1';
+    const mLabel = p.mentions >= 3 ? '🔥 ×3' : p.mentions >= 2 ? '×2' : '×1';
+    const oSt = p.openStatus;
+    const oBadge = oSt.open
+      ? `<span class="badge badge-open">● ${oSt.label}</span>`
+      : `<span class="badge badge-closed">○ ${oSt.label}</span>`;
+    const rBadge = p.rating ? `<span class="badge badge-rating">★ ${p.rating} (${p.ratingCount.toLocaleString()})</span>` : '';
+    const priceSym = p.price === 1 ? '€' : '€€';
+    const distHtml = p.dist !== null
+      ? `<div class="card-dist">${fmtDist(p.dist)}<small>${walkTime(p.dist)}</small></div>`
+      : '';
+
+    const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.name + ' Athens')}&query_place_id=${p.placeId}`;
+    const dirUrl = userLat !== null
+      ? `https://www.google.com/maps/dir/?api=1&origin=${userLat},${userLng}&destination=${p.lat},${p.lng}&travelmode=walking`
+      : `https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lng}&travelmode=walking`;
+
+    const hoursHtml = p.hours.map((h, hi) =>
+      `<div${hi === dayIdx ? ' class="today"' : ''}>${h}</div>`
+    ).join('');
+
+    const menuBtn = p.menu
+      ? `<a class="act-btn act-menu" href="${p.menu}" target="_blank" rel="noopener">📋 Menu</a>`
+      : (p.website ? `<a class="act-btn act-menu" href="${p.website}" target="_blank" rel="noopener">🌐 Website</a>` : '');
+
+    return `
+    <div class="card" style="animation-delay:${Math.min(i * 0.03, 0.3)}s">
+      <div class="card-top">
+        <div class="card-rank">${i + 1}</div>
+        <div class="card-header">
+          <div class="card-name">${p.name} <span class="card-mentions ${mClass}">${mLabel}</span></div>
+        </div>
+        ${distHtml}
+      </div>
+      <div class="card-meta">
+        ${oBadge}
+        ${rBadge}
+        <span class="badge badge-area">${p.area} · ${priceSym}</span>
+      </div>
+      <div class="card-body">
+        <div class="card-dish"><strong>Order:</strong> ${p.dish}</div>
+        <div class="card-notes">${p.notes}</div>
+        <button class="card-hours-toggle" onclick="this.nextElementSibling.classList.toggle('show');this.textContent=this.nextElementSibling.classList.contains('show')?'▾ Hide hours':'▸ Opening hours'">▸ Opening hours</button>
+        <div class="card-hours">${hoursHtml}</div>
+      </div>
+      <div class="card-actions">
+        <a class="act-btn act-map" href="${mapsUrl}" target="_blank" rel="noopener">📍 Map</a>
+        <a class="act-btn act-dir" href="${dirUrl}" target="_blank" rel="noopener">🚶 Directions</a>
+        ${menuBtn}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ======================== INIT ========================
+render();
+</script>
+</body>
+</html>
