@@ -10,6 +10,8 @@
 <title>Athens Eats</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,600;0,9..40,700;1,9..40,400&family=Fraunces:ital,opsz,wght@0,9..144,700;1,9..144,400&display=swap" rel="stylesheet">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='80'>🇬🇷</text></svg>">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
 :root {
   --bg: #f0ebe3;
@@ -394,10 +396,44 @@ header .sub { text-align: center; font-size: .78rem; opacity: .65; margin-top: 2
 .card:nth-child(4) { animation-delay: .12s; }
 .card:nth-child(5) { animation-delay: .16s; }
 
+/* === VIEW TOGGLE === */
+.view-toggle {
+  display: flex;
+  padding: 0 12px 10px;
+}
+.view-btn {
+  flex: 1;
+  padding: 9px;
+  border: 1.5px solid var(--gray-light);
+  background: var(--card);
+  font-family: inherit;
+  font-size: .82rem;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--gray);
+  transition: all .2s;
+}
+.view-btn:first-child { border-radius: 8px 0 0 8px; border-right: none; }
+.view-btn:last-child { border-radius: 0 8px 8px 0; }
+.view-btn.active { background: var(--navy); border-color: var(--navy); color: #fff; }
+
+/* === MAP === */
+#map-container {
+  display: none;
+  margin: 0 12px 16px;
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  height: 440px;
+}
+#map { height: 100%; width: 100%; }
+.leaflet-popup-content { margin: 10px 12px; line-height: 1.5; }
+
 /* === RESPONSIVE === */
 @media(min-width:600px){
   .cards { max-width: 560px; margin: 0 auto; }
   .loc-panel, .sort-bar, .filter-row, .counter { max-width: 560px; margin-left: auto; margin-right: auto; }
+  .view-toggle, #map-container { max-width: 560px; margin-left: auto; margin-right: auto; }
 }
 </style>
 </head>
@@ -450,7 +486,16 @@ header .sub { text-align: center; font-size: .78rem; opacity: .65; margin-top: 2
   <button class="sort-chip" data-s="cheap" onclick="setSort('cheap')">💰 Cheapest</button>
 </div>
 
+<!-- VIEW TOGGLE -->
+<div class="view-toggle">
+  <button class="view-btn active" data-v="list" onclick="toggleView('list')">☰ List</button>
+  <button class="view-btn" data-v="map" onclick="toggleView('map')">🗺 Map</button>
+</div>
+
 <div class="counter" id="counter"></div>
+
+<!-- MAP -->
+<div id="map-container"><div id="map"></div></div>
 
 <!-- CARDS -->
 <div class="cards" id="cards"></div>
@@ -1316,6 +1361,8 @@ function render() {
   const dayIdx = (() => { const d = today.getDay(); return d === 0 ? 6 : d - 1; })();
   const dayNames = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 
+  if (map) updateMapMarkers();
+
   container.innerHTML = list.map((p, i) => {
     const mClass = p.mentions >= 3 ? 'm3' : p.mentions >= 2 ? 'm2' : 'm1';
     const mLabel = p.mentions >= 3 ? '🔥 ×3' : p.mentions >= 2 ? '×2' : '×1';
@@ -1369,6 +1416,103 @@ function render() {
       </div>
     </div>`;
   }).join('');
+}
+
+// ======================== MAP ========================
+let map = null;
+let placeMarkers = [];
+let userMarker = null;
+let currentView = 'list';
+
+const CAT_COLORS = { souvlaki: '#d4740e', taverna: '#c0392b', meze: '#2d7a3a', other: '#1d6fa5' };
+const CAT_EMOJIS = { souvlaki: '🥙', taverna: '🍷', meze: '🫒', other: '🍽️' };
+
+function toggleView(v) {
+  currentView = v;
+  document.querySelectorAll('.view-btn').forEach(b => b.classList.toggle('active', b.dataset.v === v));
+  const mapEl = document.getElementById('map-container');
+  const cardsEl = document.getElementById('cards');
+  const counterEl = document.getElementById('counter');
+  if (v === 'map') {
+    mapEl.style.display = 'block';
+    cardsEl.style.display = 'none';
+    counterEl.style.display = 'none';
+    if (!map) initMap();
+    else { map.invalidateSize(); updateMapMarkers(); }
+  } else {
+    mapEl.style.display = 'none';
+    cardsEl.style.display = '';
+    counterEl.style.display = '';
+  }
+}
+
+function initMap() {
+  map = L.map('map');
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    maxZoom: 19,
+  }).addTo(map);
+  updateMapMarkers();
+}
+
+function makePlaceIcon(cat) {
+  const color = CAT_COLORS[cat] || CAT_COLORS.other;
+  const emoji = CAT_EMOJIS[cat] || CAT_EMOJIS.other;
+  return L.divIcon({
+    className: '',
+    html: `<div style="width:36px;height:36px;border-radius:50%;background:${color};border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.3);display:flex;align-items:center;justify-content:center;font-size:16px">${emoji}</div>`,
+    iconSize: [36, 36],
+    iconAnchor: [18, 18],
+    popupAnchor: [0, -22],
+  });
+}
+
+function updateMapMarkers() {
+  if (!map) return;
+  placeMarkers.forEach(m => m.remove());
+  placeMarkers = [];
+
+  const bounds = [];
+  PLACES.forEach(p => {
+    const icon = makePlaceIcon(p.cat);
+    const dist = (userLat !== null) ? haversine(userLat, userLng, p.lat, p.lng) : null;
+    const distLine = dist !== null
+      ? `<br><span style="color:#d4740e;font-weight:600">${fmtDist(dist)}</span> · ${walkTime(dist)}`
+      : '';
+    const oSt = isOpenNow(p);
+    const statusDot = oSt.open ? '🟢' : '🔴';
+    const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.name + ' Athens')}&query_place_id=${p.placeId}`;
+    const marker = L.marker([p.lat, p.lng], { icon })
+      .bindPopup(
+        `<b style="font-size:.92rem;color:#0f2a44">${p.name}</b>${distLine}` +
+        `<br><small>${statusDot} ${oSt.label} · ★ ${p.rating}</small>` +
+        `<br><small style="color:#6b7280">${p.area}</small>` +
+        `<br><a href="${mapsUrl}" target="_blank" rel="noopener" style="font-size:.75rem;color:#1d6fa5">Open in Google Maps ↗</a>`,
+        { maxWidth: 240 }
+      )
+      .addTo(map);
+    placeMarkers.push(marker);
+    bounds.push([p.lat, p.lng]);
+  });
+
+  // User location marker
+  if (userMarker) { userMarker.remove(); userMarker = null; }
+  if (userLat !== null) {
+    const userIcon = L.divIcon({
+      className: '',
+      html: `<div style="width:20px;height:20px;border-radius:50%;background:#4285f4;border:3px solid #fff;box-shadow:0 0 0 6px rgba(66,133,244,.25),0 2px 8px rgba(0,0,0,.25)"></div>`,
+      iconSize: [20, 20],
+      iconAnchor: [10, 10],
+      popupAnchor: [0, -14],
+    });
+    userMarker = L.marker([userLat, userLng], { icon: userIcon })
+      .bindPopup('<b>You are here</b>', { maxWidth: 160 })
+      .addTo(map);
+    bounds.push([userLat, userLng]);
+  }
+
+  if (bounds.length > 0) map.fitBounds(bounds, { padding: [36, 36] });
+  map.invalidateSize();
 }
 
 // ======================== INIT ========================
