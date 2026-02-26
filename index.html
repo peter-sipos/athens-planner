@@ -964,18 +964,26 @@ async function parseAddress() {
     normalized,
   ];
 
+  // Athens bounding box for result validation
+  const ATH = { latMin: 37.80, latMax: 38.20, lonMin: 23.40, lonMax: 24.20 };
+  function nearAthens(lat, lon) {
+    return lat >= ATH.latMin && lat <= ATH.latMax && lon >= ATH.lonMin && lon <= ATH.lonMax;
+  }
+
   try {
-    let data = [];
+    let found = null;
     for (const q of queries) {
-      const resp = await fetch('https://nominatim.openstreetmap.org/search?q=' + encodeURIComponent(q) + '&format=json&limit=1&addressdetails=0&countrycode=gr');
-      data = await resp.json();
-      if (data.length > 0) break;
+      const resp = await fetch('https://nominatim.openstreetmap.org/search?q=' + encodeURIComponent(q) + '&format=json&limit=5&addressdetails=0&countrycode=gr');
+      const data = await resp.json();
+      // Pick first result that falls within the Athens area
+      found = data.find(r => nearAthens(parseFloat(r.lat), parseFloat(r.lon))) || null;
+      if (found) break;
     }
-    if (data.length > 0) {
-      userLat = parseFloat(data[0].lat);
-      userLng = parseFloat(data[0].lon);
+    if (found) {
+      userLat = parseFloat(found.lat);
+      userLng = parseFloat(found.lon);
       st.className = 'geo-status ok';
-      st.textContent = '\u2713 Found: ' + data[0].display_name.substring(0, 60) + '\u2026';
+      st.textContent = '\u2713 Found: ' + found.display_name.substring(0, 60) + '\u2026';
       render();
       return;
     }
@@ -985,49 +993,142 @@ async function parseAddress() {
   try {
     const photonResp = await fetch(
       'https://photon.komoot.io/api/?q=' + encodeURIComponent(normalized) +
-      '&limit=1&lat=37.975&lon=23.735&lang=en',
+      '&limit=5&lat=37.975&lon=23.735&lang=en',
       { signal: AbortSignal.timeout(8000) }
     );
     if (photonResp.ok) {
       const photonData = await photonResp.json();
       if (photonData.features && photonData.features.length > 0) {
-        const [lng, lat] = photonData.features[0].geometry.coordinates;
-        userLat = lat;
-        userLng = lng;
-        const props = photonData.features[0].properties;
-        const label = props.name || props.street || normalized;
-        st.className = 'geo-status ok';
-        st.textContent = '\u2713 Found: ' + label.substring(0, 60);
-        render();
-        return;
+        // Pick first feature that is within the Athens area
+        const feat = photonData.features.find(f => {
+          const [flon, flat] = f.geometry.coordinates;
+          return nearAthens(flat, flon);
+        });
+        if (feat) {
+          const [lng, lat] = feat.geometry.coordinates;
+          userLat = lat;
+          userLng = lng;
+          const props = feat.properties;
+          const label = props.name || props.street || normalized;
+          st.className = 'geo-status ok';
+          st.textContent = '\u2713 Found: ' + label.substring(0, 60);
+          render();
+          return;
+        }
       }
     }
   } catch (e) {}
 
+  // Strip generic words (Hotel, Restaurant, Athens, etc.) and retry key terms
+  const keyTerms = normalized
+    .replace(/\b(hotel|hotels|restaurant|restaurants|cafe|cafes|bar|bars|taverna|tavernas|bistro|grill|souvlaki|inn|hostel|suites?|apartments?|athens|greece|greek|hellas)\b/gi, ' ')
+    .replace(/\s{2,}/g, ' ').trim();
+  if (keyTerms && keyTerms.toLowerCase() !== normalized.toLowerCase()) {
+    const keyQueries = [keyTerms + ', Athens, Greece', keyTerms + ', Greece'];
+    try {
+      let found = null;
+      for (const q of keyQueries) {
+        const resp = await fetch('https://nominatim.openstreetmap.org/search?q=' + encodeURIComponent(q) + '&format=json&limit=5&addressdetails=0&countrycode=gr');
+        const data = await resp.json();
+        found = data.find(r => nearAthens(parseFloat(r.lat), parseFloat(r.lon))) || null;
+        if (found) break;
+      }
+      if (found) {
+        userLat = parseFloat(found.lat);
+        userLng = parseFloat(found.lon);
+        st.className = 'geo-status ok';
+        st.textContent = '\u2713 Found: ' + found.display_name.substring(0, 60) + '\u2026';
+        render();
+        return;
+      }
+    } catch (e) {}
+
+    // Also try key terms through Photon
+    try {
+      const photonResp2 = await fetch(
+        'https://photon.komoot.io/api/?q=' + encodeURIComponent(keyTerms) +
+        '&limit=5&lat=37.975&lon=23.735&lang=en',
+        { signal: AbortSignal.timeout(8000) }
+      );
+      if (photonResp2.ok) {
+        const photonData2 = await photonResp2.json();
+        if (photonData2.features && photonData2.features.length > 0) {
+          const feat = photonData2.features.find(f => {
+            const [flon, flat] = f.geometry.coordinates;
+            return nearAthens(flat, flon);
+          });
+          if (feat) {
+            const [lng, lat] = feat.geometry.coordinates;
+            userLat = lat;
+            userLng = lng;
+            const props = feat.properties;
+            const label = props.name || props.street || keyTerms;
+            st.className = 'geo-status ok';
+            st.textContent = '\u2713 Found: ' + label.substring(0, 60);
+            render();
+            return;
+          }
+        }
+      }
+    } catch (e) {}
+  }
+
+  // Last resort: Nominatim without country restriction, validate Athens proximity
+  try {
+    const resp = await fetch(
+      'https://nominatim.openstreetmap.org/search?q=' + encodeURIComponent(normalized) +
+      '&format=json&limit=10&addressdetails=0',
+      { signal: AbortSignal.timeout(8000) }
+    );
+    const data = await resp.json();
+    const found = data.find(r => nearAthens(parseFloat(r.lat), parseFloat(r.lon)));
+    if (found) {
+      userLat = parseFloat(found.lat);
+      userLng = parseFloat(found.lon);
+      st.className = 'geo-status ok';
+      st.textContent = '\u2713 Found: ' + found.display_name.substring(0, 60) + '\u2026';
+      render();
+      return;
+    }
+  } catch (e) {}
+
   st.className = 'geo-status err';
-  st.textContent = 'Not found. Try a landmark (Syntagma, Monastiraki) or GPS coords (37.975, 23.735).';
+  st.innerHTML = 'Not found. Try a landmark (Syntagma, Monastiraki), GPS coords (37.975, 23.735), or open Google Maps and copy the coordinates from the place\u2019s info panel.';
 }
 
-// Extract lat/lng from various Google Maps URL formats
-function extractCoordsFromGmapsUrl(url) {
+// Extract lat/lng from various Google Maps URL formats (also works on HTML content)
+function extractCoordsFromGmapsUrl(str) {
   // Pattern 1: /@37.9755,23.7348,17z  (most common in full URLs)
-  let m = url.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
+  let m = str.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
   if (m) return [parseFloat(m[1]), parseFloat(m[2])];
 
   // Pattern 2: ?q=37.9755,23.7348  or &q=...
-  m = url.match(/[?&]q=(-?\d+\.\d+),(-?\d+\.\d+)/);
+  m = str.match(/[?&]q=(-?\d+\.\d+),(-?\d+\.\d+)/);
   if (m) return [parseFloat(m[1]), parseFloat(m[2])];
 
   // Pattern 3: ?ll=37.9755,23.7348 or &ll=...
-  m = url.match(/[?&]ll=(-?\d+\.\d+),(-?\d+\.\d+)/);
+  m = str.match(/[?&]ll=(-?\d+\.\d+),(-?\d+\.\d+)/);
   if (m) return [parseFloat(m[1]), parseFloat(m[2])];
 
   // Pattern 4: /place/.../ followed by data with coords
-  m = url.match(/!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/);
+  m = str.match(/!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/);
   if (m) return [parseFloat(m[1]), parseFloat(m[2])];
 
   // Pattern 5: query_place_id or just coords in path
-  m = url.match(/\/(-?\d+\.\d{4,}),(-?\d+\.\d{4,})/);
+  m = str.match(/\/(-?\d+\.\d{4,}),(-?\d+\.\d{4,})/);
+  if (m) return [parseFloat(m[1]), parseFloat(m[2])];
+
+  // Pattern 6: JSON "lat":37.9755,"lng":23.7348 (embedded in HTML/JSON data)
+  m = str.match(/"lat"\s*:\s*(-?\d+\.\d+)\s*,\s*"lng"\s*:\s*(-?\d+\.\d+)/);
+  if (m) return [parseFloat(m[1]), parseFloat(m[2])];
+
+  // Pattern 7: og:url meta tag containing a Google Maps URL with coords
+  m = str.match(/content="https?:\/\/(?:www\.)?google\.com\/maps[^"]*@(-?\d+\.\d+),(-?\d+\.\d+)/);
+  if (m) return [parseFloat(m[1]), parseFloat(m[2])];
+
+  // Pattern 8: Athens-range coordinate pair anywhere in content (lat 37-38, lon 23-24)
+  // Catches coords embedded in Google Maps JS initialisation data
+  m = str.match(/\b(3[78]\.\d{4,})[,\s]+(2[34]\.\d{4,})\b/);
   if (m) return [parseFloat(m[1]), parseFloat(m[2])];
 
   return null;
@@ -1074,6 +1175,19 @@ async function resolveShortMapsUrl(shortUrl) {
         const coords = extractCoordsFromGmapsUrl(data.contents);
         if (coords) return { lat: coords[0], lng: coords[1] };
       }
+    }
+  } catch (e) {}
+
+  // Method 3: corsproxy.io — alternative CORS proxy, fetches the final page after redirects
+  try {
+    const resp = await fetch(
+      'https://corsproxy.io/?' + encodeURIComponent(shortUrl),
+      { signal: AbortSignal.timeout(10000) }
+    );
+    if (resp.ok) {
+      const html = await resp.text();
+      const coords = extractCoordsFromGmapsUrl(html);
+      if (coords) return { lat: coords[0], lng: coords[1] };
     }
   } catch (e) {}
 
