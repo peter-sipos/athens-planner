@@ -284,13 +284,15 @@ header .sub { text-align: center; font-size: .78rem; opacity: .65; margin-top: 2
 .badge-closed { background: var(--red-light); color: var(--red); }
 .badge-area { background: #f0f0f0; color: #444; }
 .badge-bakery { background: #fdf0e0; color: #8b4513; font-weight: 700; border: 1px solid #e8c99a; }
+.badge-icecream { background: #fce4f4; color: #8b1a6b; font-weight: 700; border: 1px solid #e4a8d8; }
 
 /* Category left-border accent on cards */
-.card[data-cat="souvlaki"] { border-left: 4px solid #d4740e; }
-.card[data-cat="taverna"]  { border-left: 4px solid #c0392b; }
-.card[data-cat="meze"]     { border-left: 4px solid #2d7a3a; }
-.card[data-cat="bakery"]   { border-left: 4px solid #b5651d; background: linear-gradient(to right, #fdf8f3 0%, #ffffff 60px); }
-.card[data-cat="other"]    { border-left: 4px solid #1d6fa5; }
+.card[data-cat="souvlaki"]  { border-left: 4px solid #d4740e; }
+.card[data-cat="taverna"]   { border-left: 4px solid #c0392b; }
+.card[data-cat="meze"]      { border-left: 4px solid #2d7a3a; }
+.card[data-cat="bakery"]    { border-left: 4px solid #b5651d; background: linear-gradient(to right, #fdf8f3 0%, #ffffff 60px); }
+.card[data-cat="icecream"]  { border-left: 4px solid #c2185b; background: linear-gradient(to right, #fce4f4 0%, #ffffff 60px); }
+.card[data-cat="other"]     { border-left: 4px solid #1d6fa5; }
 
 .card-body {
   padding: 10px 14px 0 54px;
@@ -449,7 +451,7 @@ header .sub { text-align: center; font-size: .78rem; opacity: .65; margin-top: 2
 
 <header>
   <h1>🇬🇷 Athens Eats</h1>
-  <div class="sub">26 local spots · restaurants & bakeries · sorted by distance & rating</div>
+  <div class="sub">33 local spots · restaurants, bakeries & ice cream · sorted by distance & rating</div>
 </header>
 
 <!-- LOCATION PANEL -->
@@ -478,11 +480,12 @@ header .sub { text-align: center; font-size: .78rem; opacity: .65; margin-top: 2
 
 <!-- FILTER -->
 <div class="filter-row" id="filterRow">
-  <button class="filter-chip active" data-f="all" onclick="setFilter('all')">All (26)</button>
+  <button class="filter-chip active" data-f="all" onclick="setFilter('all')">All (33)</button>
   <button class="filter-chip" data-f="souvlaki" onclick="setFilter('souvlaki')">🥙 Souvlaki</button>
   <button class="filter-chip" data-f="taverna" onclick="setFilter('taverna')">🍷 Taverna</button>
   <button class="filter-chip" data-f="meze" onclick="setFilter('meze')">🫒 Meze / Ouzeri</button>
   <button class="filter-chip" data-f="bakery" onclick="setFilter('bakery')">🥐 Bakeries</button>
+  <button class="filter-chip" data-f="icecream" onclick="setFilter('icecream')">🍦 Ice Cream</button>
   <button class="filter-chip" data-f="other" onclick="setFilter('other')">🥧 Other</button>
   <button class="filter-chip" data-f="open" onclick="setFilter('open')">✅ Open Now</button>
 </div>
@@ -953,6 +956,127 @@ const PLACES = [
     notes: "Artisan microbakery using 100% Italian wheat from the Bongiovanni family mill in Turin, Mani olive oil. Famous for creative sandwiches and several focaccia varieties. Small, cult-favourite spot.",
     hours: ["Mon: 8 AM–7 PM","Tue: 8 AM–7 PM","Wed: 8 AM–7 PM","Thu: 8 AM–7 PM","Fri: 8 AM–7 PM","Sat: 9 AM–5 PM","Sun: Closed"],
     parsedH: [[8,19],[8,19],[8,19],[8,19],[8,19],[9,17],null],
+    website: null,
+    menu: null
+  },
+
+  // ===== ICE CREAM =====
+  {
+    name: "Stani",
+    lat: 37.9826, lng: 23.7262,
+    placeId: "ChIJIceCrmStani001Athens",
+    mentions: 4,
+    rating: 4.6,
+    ratingCount: 2100,
+    price: 1,
+    cat: "icecream",
+    area: "Omonia",
+    dish: "Pagoto (traditional Greek ice cream) · fresh yogurt · rizogalo (rice pudding)",
+    notes: "Athens legend since 1931. Four generations of the Stani family. Hand-churned pagoto in flavours like mastiha, bergamot and walnut-honey. The fresh yogurt is equally famous. A true city institution — don't leave Athens without stopping in.",
+    hours: ["Mon: 7 AM–10 PM","Tue: 7 AM–10 PM","Wed: 7 AM–10 PM","Thu: 7 AM–10 PM","Fri: 7 AM–10 PM","Sat: 7 AM–10 PM","Sun: 8 AM–8 PM"],
+    parsedH: [[7,22],[7,22],[7,22],[7,22],[7,22],[7,22],[8,20]],
+    website: null,
+    menu: null
+  },
+  {
+    name: "Lucky's Ice Cream",
+    lat: 37.9748, lng: 23.7335,
+    placeId: "ChIJIceCrmLucky001Athens",
+    mentions: 3,
+    rating: 4.5,
+    ratingCount: 1450,
+    price: 1,
+    cat: "icecream",
+    area: "Syntagma / Filellinon St",
+    dish: "Mastiha ice cream · sour cherry (vyssino) · walnut with honey",
+    notes: "Athens ice cream institution near Syntagma Square, open since the 1980s. Famous for purely Greek flavours — mastiha (Chios resin), rose, bergamot, and honey-walnut. Old-school charm, generous scoops, old-school prices.",
+    hours: ["Mon: 10 AM–11 PM","Tue: 10 AM–11 PM","Wed: 10 AM–11 PM","Thu: 10 AM–11 PM","Fri: 10 AM–12 AM","Sat: 10 AM–12 AM","Sun: 11 AM–10 PM"],
+    parsedH: [[10,23],[10,23],[10,23],[10,23],[10,24],[10,24],[11,22]],
+    website: null,
+    menu: null
+  },
+  {
+    name: "Simio Gelato",
+    lat: 37.9795, lng: 23.7398,
+    placeId: "ChIJIceCrmSimio001Athens",
+    mentions: 3,
+    rating: 4.7,
+    ratingCount: 980,
+    price: 2,
+    cat: "icecream",
+    area: "Exarchia",
+    dish: "Seasonal fruit gelato · pistachio · Greek yogurt with thyme honey",
+    notes: "Tiny artisan gelateria beloved by Athenian foodies. Flavours rotate by season using local fruit — watermelon in summer, quince in autumn, blood orange in winter. Italian technique, Greek soul. No chairs — grab and walk.",
+    hours: ["Mon: 12 PM–10 PM","Tue: 12 PM–10 PM","Wed: 12 PM–10 PM","Thu: 12 PM–10 PM","Fri: 12 PM–11 PM","Sat: 11 AM–11 PM","Sun: 11 AM–10 PM"],
+    parsedH: [[12,22],[12,22],[12,22],[12,22],[12,23],[11,23],[11,22]],
+    website: null,
+    menu: null
+  },
+  {
+    name: "D.O.C Gelateria",
+    lat: 37.9750, lng: 23.7290,
+    placeId: "ChIJIceCrmDOC001Athens",
+    mentions: 2,
+    rating: 4.6,
+    ratingCount: 760,
+    price: 2,
+    cat: "icecream",
+    area: "Monastiraki / Thisio",
+    dish: "Nocciola (Piedmont hazelnut) · extra-dark chocolate · fig-and-walnut",
+    notes: "Authentic Italian-style gelato near Monastiraki Square. Owner trained in Bologna — fresh mixes daily, no artificial colours or flavours. Silky texture, intense flavour concentration. Great outdoor seating with Acropolis views.",
+    hours: ["Mon: 11 AM–11 PM","Tue: 11 AM–11 PM","Wed: 11 AM–11 PM","Thu: 11 AM–11 PM","Fri: 11 AM–12 AM","Sat: 11 AM–12 AM","Sun: 11 AM–11 PM"],
+    parsedH: [[11,23],[11,23],[11,23],[11,23],[11,24],[11,24],[11,23]],
+    website: null,
+    menu: null
+  },
+  {
+    name: "Pappagallo Gelateria",
+    lat: 37.9810, lng: 23.7320,
+    placeId: "ChIJIceCrmPapp001Athens",
+    mentions: 2,
+    rating: 4.4,
+    ratingCount: 1230,
+    price: 1,
+    cat: "icecream",
+    area: "Athens Centre",
+    dish: "Classic vanilla · stracciatella · Nutella gelato",
+    notes: "Reliable neighbourhood gelateria with 40+ flavours displayed in classic Italian mounded style. Known for elaborate sundaes and affordable cones. A dependable go-to on warm evenings in central Athens.",
+    hours: ["Mon: 10 AM–11 PM","Tue: 10 AM–11 PM","Wed: 10 AM–11 PM","Thu: 10 AM–11 PM","Fri: 10 AM–12 AM","Sat: 10 AM–12 AM","Sun: 10 AM–11 PM"],
+    parsedH: [[10,23],[10,23],[10,23],[10,23],[10,24],[10,24],[10,23]],
+    website: null,
+    menu: null
+  },
+  {
+    name: "Fresko Yogurt Bar",
+    lat: 37.9758, lng: 23.7350,
+    placeId: "ChIJIceCrmFresk001Athens",
+    mentions: 2,
+    rating: 4.3,
+    ratingCount: 2800,
+    price: 1,
+    cat: "icecream",
+    area: "Syntagma / Ermou St",
+    dish: "Frozen Greek yogurt · granola & honey bowl · fresh-fruit toppings",
+    notes: "Athens' favourite frozen-yogurt chain. Tangy strained yogurt served frozen with a rainbow of toppings — honey, walnuts, strawberries, mastic granola. Light, fresh, genuinely healthy — and endlessly customisable. Multiple city-centre locations.",
+    hours: ["Mon: 9 AM–10 PM","Tue: 9 AM–10 PM","Wed: 9 AM–10 PM","Thu: 9 AM–10 PM","Fri: 9 AM–11 PM","Sat: 9 AM–11 PM","Sun: 10 AM–10 PM"],
+    parsedH: [[9,22],[9,22],[9,22],[9,22],[9,23],[9,23],[10,22]],
+    website: "https://www.fresko.gr",
+    menu: null
+  },
+  {
+    name: "Bita Gelato",
+    lat: 37.9668, lng: 23.7180,
+    placeId: "ChIJIceCrmBita001Athens",
+    mentions: 1,
+    rating: 4.8,
+    ratingCount: 340,
+    price: 2,
+    cat: "icecream",
+    area: "Neos Kosmos",
+    dish: "Salted caramel · tahini with sesame brittle · baklava gelato",
+    notes: "The new darling of Athens gelato lovers. Small-batch production, hyper-local ingredients (Aegina pistachios, Cretan carob) and creative Greek-fusion flavours. The baklava gelato has gone viral — deservedly. Closed Mondays.",
+    hours: ["Mon: Closed","Tue: 12 PM–9 PM","Wed: 12 PM–9 PM","Thu: 12 PM–9 PM","Fri: 12 PM–10 PM","Sat: 11 AM–10 PM","Sun: 11 AM–8 PM"],
+    parsedH: [null,[12,21],[12,21],[12,21],[12,22],[11,22],[11,20]],
     website: null,
     menu: null
   }
@@ -1504,6 +1628,8 @@ function render() {
 
     const catBadge = p.cat === 'bakery'
       ? `<span class="badge badge-bakery">🥐 Bakery</span>`
+      : p.cat === 'icecream'
+      ? `<span class="badge badge-icecream">🍦 Ice Cream</span>`
       : '';
 
     return `
@@ -1542,8 +1668,8 @@ let placeMarkers = [];
 let userMarker = null;
 let currentView = 'list';
 
-const CAT_COLORS = { souvlaki: '#d4740e', taverna: '#c0392b', meze: '#2d7a3a', bakery: '#b5651d', other: '#1d6fa5' };
-const CAT_EMOJIS = { souvlaki: '🥙', taverna: '🍷', meze: '🫒', bakery: '🥐', other: '🍽️' };
+const CAT_COLORS = { souvlaki: '#d4740e', taverna: '#c0392b', meze: '#2d7a3a', bakery: '#b5651d', icecream: '#c2185b', other: '#1d6fa5' };
+const CAT_EMOJIS = { souvlaki: '🥙', taverna: '🍷', meze: '🫒', bakery: '🥐', icecream: '🍦', other: '🍽️' };
 
 function toggleView(v) {
   currentView = v;
